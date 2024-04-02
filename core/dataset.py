@@ -25,6 +25,6 @@ class HatefulMemesDataset(Dataset):
         if self.transform:
             img = self.transform(img)
         if self.tokenizer:
-            text = self.tokenizer(text)
+            text = self.tokenizer(text, return_tensors='pt')
 
         return img, text, label
