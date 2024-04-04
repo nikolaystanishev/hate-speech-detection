@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Module, Sequential, Linear
-from transformers import BertModel
+from transformers import BertModel, BertTokenizer
 import torchvision.models as models
 
 class HateMemeModel(Module):
@@ -36,7 +36,11 @@ class PretrainedModel:
         return BertModel.from_pretrained('bert-base-uncased')
     
     @staticmethod
+    def load_bert_tokenizer():
+        return BertTokenizer.from_pretrained('bert-base-uncased')
+    
+    @staticmethod
     def load_resnet_image_model():
-        model = models.resnet50(pretrained=True)
+        model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
         modules = list(model.children())[:-1]
         return Sequential(*modules)
