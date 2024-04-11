@@ -1,11 +1,16 @@
+import os
+
 import torch
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader, random_split
-from torch import nn, optim, Generator
+from torch.utils.data import DataLoader
+from torch import nn, optim
 
 from core.model import PretrainedModel, HateMemeModel
 from core.dataset import HatefulMemesDataset, collate_fn
 from core.loop import train, evaluate
+
+DATA_DIR = '/Users/nstanishev/Workspace/epfl/04/dl/project/data/hateful_memes'
+
 
 def main():
     lr = 1e-5
@@ -23,19 +28,22 @@ def main():
     tokenizer = PretrainedModel.load_bert_tokenizer()
 
     train_dataset = HatefulMemesDataset(
-        '/Users/nstanishev/Workspace/epfl/04/dl/project/data/data/train.jsonl',
+        os.path.join(DATA_DIR, 'train.jsonl'),
         tokenizer=tokenizer,
         transform=transform
     )
-    generator = Generator().manual_seed(42)
-    train_dataset, test_set = random_split(train_dataset, [500, 8000], generator=generator)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     val_dataset = HatefulMemesDataset(
-        '/Users/nstanishev/Workspace/epfl/04/dl/project/data/data/dev.jsonl',
+        os.path.join(DATA_DIR, 'dev.jsonl'),
         tokenizer=tokenizer,
         transform=transform
     )
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+    test_set = HatefulMemesDataset(
+        os.path.join(DATA_DIR, 'test.jsonl'),
+        tokenizer=tokenizer,
+        transform=transform
+    )
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
     model = HateMemeModel(PretrainedModel.load_bert_text_model(), PretrainedModel.load_resnet_image_model())

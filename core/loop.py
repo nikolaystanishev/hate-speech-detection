@@ -26,8 +26,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, device,
             loss.backward()
             optimizer.step()
 
-            if (i + 1) % 200 == 0:
-                print(f'[{epoch + 1}, {i + 1:5d}] loss: {np.mean(train_losses[-200:]):.3f}')
+            print(f'[{epoch + 1}, {i + 1:5d}] loss: {train_losses[-1]:.3f}')
 
         torch.save(model.state_dict(), f'{model_dir_path}/model_{epoch + 1}.pth')
 
@@ -53,8 +52,8 @@ def evaluate(model, data_loader, criterion, device):
             preds.append(pred.tolist())
             labels.append(label.cpu().numpy())
         
-        labels = np.vstack(labels)
-        preds = np.vstack(preds)
+        labels = np.concatenate(labels)
+        preds = np.concatenate(preds)
 
         metrics = {"loss": np.mean(losses)}
         metrics["macro_f1"] = f1_score(labels, preds, average="macro")
