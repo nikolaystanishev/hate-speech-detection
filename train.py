@@ -13,8 +13,8 @@ DATA_DIR = '/Users/nstanishev/Workspace/epfl/04/dl/project/data/hateful_memes'
 
 
 def main():
-    lr = 1e-5
-    epochs = 10
+    lr = 0.0005
+    epochs = 20
     batch_size = 64
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -23,7 +23,7 @@ def main():
         transforms.Resize((232, 232)),
         transforms.CenterCrop((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ])
     tokenizer = PretrainedModel.load_bert_tokenizer()
 

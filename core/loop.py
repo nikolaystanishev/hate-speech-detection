@@ -31,10 +31,11 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, device,
         torch.save(model.state_dict(), f'{model_dir_path}/model_{epoch + 1}.pth')
 
         print(f'Epoch {epoch + 1} average loss: {np.mean(train_losses):.3f}')
+        evaluate(model, train_loader, criterion, device, 'Train')
         evaluate(model, val_loader, criterion, device)
 
 
-def evaluate(model, data_loader, criterion, device):
+def evaluate(model, data_loader, criterion, device, kind='Evaluation'):
     with torch.no_grad():
         losses, preds, labels = [], [], []
         for batch in tqdm(data_loader):
@@ -63,7 +64,7 @@ def evaluate(model, data_loader, criterion, device):
         metrics["recall"] = recall_score(labels, preds)
 
         print(
-            f'Evaluation loss: {metrics["loss"]:.3f}, macro f1: {metrics["macro_f1"]:.3f}, ' + \
+            f'{kind} loss: {metrics["loss"]:.3f}, macro f1: {metrics["macro_f1"]:.3f}, ' + \
             f'micro f1: {metrics["micro_f1"]:.3f}, accuracy: {metrics["accuracy"]:.3f}, ' + \
             f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}'
         )

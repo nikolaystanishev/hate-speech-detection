@@ -17,8 +17,8 @@ class HateMemeModel(Module):
         self.relu = torch.nn.ReLU()
 
     def forward(self, text, image):
-        text_features = self.text_model(**text).pooler_output
-        image_features = self.image_model(image)
+        text_features = self.relu(self.text_model(**text).pooler_output)
+        image_features = self.relu(self.image_model(image))
         image_features = image_features.view(image_features.size(0), -1)
         
         combined = torch.cat([text_features, image_features], dim=1)
