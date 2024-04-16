@@ -9,9 +9,8 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, device,
     model.train()
     for epoch in range(epochs):
         train_losses = []
-        optimizer.zero_grad()
 
-        for i, batch in tqdm(enumerate(train_loader)):
+        for i, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
             optimizer.zero_grad()
 
             image, text, label = batch
