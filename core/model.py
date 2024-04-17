@@ -81,3 +81,25 @@ class ClipHateMemeModel(Module):
         
         return out
 
+
+class ClipHateMemeModelFreeze(Module):
+        def __init__(self):
+            super(ClipHateMemeModelFreeze, self).__init__()
+            self.fc1 = Linear(1024, 48)
+            self.fc2 = Linear(48, 24)
+            self.fc3 = Linear(24, 2)
+            self.dropout = torch.nn.Dropout(0.15)
+            self.relu = torch.nn.LeakyReLU()
+    
+        def forward(self, text, image):
+            image = self.dropout(image)
+            text = self.dropout(text)
+            combined = torch.cat([text, image], dim=-1)
+            out = self.relu(self.fc1(combined))
+            self.dropout(out)
+            out = self.relu(self.fc2(out))
+            self.dropout(out)
+            out = self.fc3(out)
+            return out
+
+

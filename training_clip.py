@@ -10,6 +10,8 @@ from core.dataset import ClipHatefulMemesDataset, collate_fn_clip
 from core.loop import train, evaluate
 
 DATA_DIR = '/Users/nstanishev/Workspace/epfl/04/dl/project/data/hateful_memes'
+cur_dir = os.path.dirname(__file__)
+DATA_DIR = os.path.join(cur_dir, 'data/')
 
 
 def main():
@@ -34,7 +36,7 @@ def main():
 	)
 	val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn_clip)
 	test_set = ClipHatefulMemesDataset(
-	os.path.join(DATA_DIR, 'test_seen.jsonl'),
+	os.path.join(DATA_DIR, 'test.jsonl'),
 	transform=transform,
 		tokenizer=tokenizer
 	)

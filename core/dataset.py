@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import Dataset
 from core.model import PretrainedModel
 import clip
+from tqdm.notebook import tqdm
 
 class HatefulMemesDataset(Dataset):
 
@@ -100,3 +101,20 @@ def collate_fn_clip(batch):
         },
         label_tensor
     )
+
+class ClipHatefulMemeDatasetFreeze(Dataset):
+    def __init__(self, data_file_path):
+        self.data = [json.loads(jline) for jline in open(data_file_path, 'r').readlines()]
+        self.data_dir = os.path.dirname(data_file_path)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        el = self.data[idx]
+
+        img = torch.tensor(el['img_embedding'][0]).to(self.device)
+        text = torch.tensor(el['text_embedding'][0]).to(self.device)
+        label = torch.tensor(el['label']).to(self.device)
+        return img, text, label
