@@ -1,4 +1,5 @@
 import torch
+import clip
 from torch.nn import Module, Sequential, Linear
 from transformers import BertModel, BertTokenizer
 import torchvision.models as models
@@ -48,3 +49,61 @@ class PretrainedModel:
         model = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
         modules = list(model.children())[:-1]
         return Sequential(*modules)
+
+    @staticmethod
+    def load_clip_model():
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        return clip.load("ViT-B/16", device=device)
+
+    @staticmethod
+    def load_clip_tokenizer():
+        return clip.tokenize
+
+class ClipHateMemeModel(Module):
+
+    def __init__(self, model, tokenizer):
+        super(ClipHateMemeModel, self).__init__()
+        self.model = model
+        self.tokenizer = tokenizer
+        self.fc1 = Linear(512, 32)
+        self.fc2 = Linear(64, 16)
+        self.fc3 = Linear(16, 2)
+        self.dropout = torch.nn.Dropout(0.15)
+        self.relu = torch.nn.ReLU()
+
+    def forward(self, text, image):
+        text_features = self.model.encode_text(text['input_ids'])
+        image_features = self.model.encode_image(image)
+        text_features = self.dropout(text_features)
+        image_features = self.dropout(image_features)
+        text_features = self.relu(self.fc1(text_features.to(dtype=torch.float32)))
+        image_features = self.relu(self.fc1(image_features.to(dtype=torch.float32)))
+        combined = torch.cat([text_features, image_features], dim=1)
+        combined = self.dropout(combined)
+        out = self.relu(self.fc2(combined))
+        out = self.fc3(out)
+        
+        return out
+
+
+class ClipHateMemeModelFreeze(Module):
+        def __init__(self):
+            super(ClipHateMemeModelFreeze, self).__init__()
+            self.fc1 = Linear(1024, 48)
+            self.fc2 = Linear(48, 24)
+            self.fc3 = Linear(24, 2)
+            self.dropout = torch.nn.Dropout(0.15)
+            self.relu = torch.nn.LeakyReLU()
+    
+        def forward(self, text, image):
+            image = self.dropout(image)
+            text = self.dropout(text)
+            combined = torch.cat([text, image], dim=-1)
+            out = self.relu(self.fc1(combined))
+            self.dropout(out)
+            out = self.relu(self.fc2(out))
+            self.dropout(out)
+            out = self.fc3(out)
+            return out
+
+
