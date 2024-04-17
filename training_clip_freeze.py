@@ -14,7 +14,7 @@ DATA_DIR = os.path.join(cur_dir, 'data/')
 
 
 def main():
-	lr = 1e-3
+	lr = 2e-4
 	epochs = 20
 	batch_size = 64
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -27,7 +27,7 @@ def main():
 	val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 	model = ClipHateMemeModelFreeze()
-	optimizer = optim.AdamW(model.parameters(), lr=lr, eps=1e-4, weight_decay=0.005)
+	optimizer = optim.AdamW(model.parameters(), lr=lr, eps=1e-4, weight_decay=0.01)
 	criterion = nn.CrossEntropyLoss(weight=torch.tensor([1.0/5481, 1/3019]))
 
 	model.to(device)

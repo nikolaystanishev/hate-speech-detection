@@ -3,7 +3,9 @@ import clip
 from torch.nn import Module, Sequential, Linear
 from transformers import BertModel, BertTokenizer
 import torchvision.models as models
-
+import os
+import sys
+import json
 class HateMemeModel(Module):
 
     def __init__(self, text_model, image_model, dropout=0.1):
@@ -86,24 +88,69 @@ class ClipHateMemeModel(Module):
         return out
 
 
+# class ClipHateMemeModelFreeze(Module):
+#         def __init__(self):
+#             super(ClipHateMemeModelFreeze, self).__init__()
+#             self.fc1 = Linear(1024, 48)
+#             self.fc2 = Linear(48, 24)
+#             self.fc3 = Linear(24, 2)
+#             self.dropout = torch.nn.Dropout(0.15)
+#             self.relu = torch.nn.LeakyReLU()
+    
+#         def forward(self, text, image):
+#             image = self.dropout(image)
+#             text = self.dropout(text)
+#             combined = torch.cat([text, image], dim=-1)
+#             out = self.relu(self.fc1(combined))
+#             self.dropout(out)
+#             out = self.relu(self.fc2(out))
+#             self.dropout(out)
+#             out = self.fc3(out)
+#             return out
+
 class ClipHateMemeModelFreeze(Module):
         def __init__(self):
             super(ClipHateMemeModelFreeze, self).__init__()
-            self.fc1 = Linear(1024, 48)
-            self.fc2 = Linear(48, 24)
-            self.fc3 = Linear(24, 2)
-            self.dropout = torch.nn.Dropout(0.15)
-            self.relu = torch.nn.LeakyReLU()
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.class_filename = os.path.join(os.path.dirname(__file__), '../data/classes_clip.jsonl')
+            self.classes = torch.tensor([json.loads(jline)['embedding'] for jline in open(self.class_filename, 'r').readlines()]).repeat(64,1,1).permute(1,0,2).to(device=self.device)
+            self.similarity = torch.nn.CosineSimilarity(dim=2)
+            self.projection = Linear(512, 128)
+            self.projection2 = Linear(1024, 512)
+            self.c_n = self.classes.size(0)
+            self.fc1 = Linear(3*self.c_n, 32)
+            self.fc2 = Linear(32, 32)
+            self.fc3 = Linear(32, 32)
+            self.fc4 = Linear(32, 16)
+            self.fc5 = Linear(16, 2)
+            self.dropout = torch.nn.Dropout(0.1)
+            self.relu = torch.nn.ReLU()
     
         def forward(self, text, image):
-            image = self.dropout(image)
             text = self.dropout(text)
-            combined = torch.cat([text, image], dim=-1)
+            image = self.dropout(image)
+            text_image = torch.cat([text, image], dim=1)
+            text_image = self.projection2(text_image)
+            text_image = self.projection(text_image)
+            classes = self.relu(self.projection(self.classes))
+            text = self.relu(self.projection(text))
+            image = self.relu(self.projection(image))
+            # classes = self.classes
+            batch_size = text.size(0)
+
+            similarity_text = self.similarity(classes[:,:batch_size,:], text.repeat(self.c_n,1,1)).permute(1,0)
+            similarity_image = self.similarity(classes[:,:batch_size,:], image.repeat(self.c_n,1,1)).permute(1,0)
+            similarity_combined = self.similarity(classes[:,:batch_size,:], text_image.repeat(self.c_n,1,1)).permute(1,0)
+            combined = torch.cat([similarity_text, similarity_image, similarity_combined], dim=1)
+
             out = self.relu(self.fc1(combined))
-            self.dropout(out)
+            out = self.dropout(out)
             out = self.relu(self.fc2(out))
-            self.dropout(out)
-            out = self.fc3(out)
+            out = self.dropout(out)
+            out = self.relu(self.fc3(out))
+            out = self.dropout(out)
+            out = self.relu(self.fc4(out))
+            out = self.dropout(out)
+            out = self.fc5(out)
+
             return out
-
-
