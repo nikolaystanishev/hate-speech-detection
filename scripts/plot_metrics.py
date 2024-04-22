@@ -33,11 +33,13 @@ def add_metrics(metrics, new_metrics):
     return metrics
 
 
-def plot_metrics(train_metrics, eval_metrics):
+def plot_metrics(train_metrics, eval_metrics, test_metric):
     fig, axs = plt.subplots(2, 3, figsize=(15, 10))
     for i, key in enumerate(train_metrics.keys()):
         axs[i // 3, i % 3].plot(train_metrics[key], c='blue', label='Train')
         axs[i // 3, i % 3].plot(eval_metrics[key], c='orange', label='Evaluation')
+        if test_metric is not None:
+            axs[i // 3, i % 3].axhline(y=test_metric[key], c='red', label='Test')
         axs[i // 3, i % 3].set_title(key)
         axs[i // 3, i % 3].legend()
     # plt.show()
@@ -45,16 +47,18 @@ def plot_metrics(train_metrics, eval_metrics):
 
 train_metrics = get_empty_metrics()
 eval_metrics = get_empty_metrics()
-
+test_metrics = None
 
 with open(sys.argv[1], 'r') as f:
     for line in f.readlines():
         train_metric = extract_metrics(line, 'Train')
         eval_metric = extract_metrics(line, 'Evaluation')
+        test_metric = extract_metrics(line, 'Test')
         if train_metric is not None:
             train_metrics = add_metrics(train_metrics, train_metric)
         if eval_metric is not None:
             eval_metrics = add_metrics(eval_metrics, eval_metric)
+        if test_metric is not None:
+            test_metrics = test_metric
 
-
-plot_metrics(train_metrics, eval_metrics)
+plot_metrics(train_metrics, eval_metrics, test_metrics)
