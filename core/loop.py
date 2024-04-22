@@ -1,16 +1,16 @@
 import torch
 import numpy as np
-from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
+from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, roc_auc_score
 from tqdm import tqdm
 
 
-def train(model, train_loader, val_loader, optimizer, criterion, epochs, device, model_dir_path):
+def train(model, train_loader, train_eval_loader, val_seen_loader, val_unseen_loader, optimizer, criterion, epochs, device, model_dir_path):
     train_losses = []
     model.train()
     for epoch in range(epochs):
         train_losses = []
 
-        for i, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
+        for i, batch in tqdm(enumerate(train_loader)):
             optimizer.zero_grad()
 
             image, text, label = batch
@@ -30,8 +30,9 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, device,
         torch.save(model.state_dict(), f'{model_dir_path}/model_{epoch + 1}.pth')
 
         print(f'Epoch {epoch + 1} average loss: {np.mean(train_losses):.3f}')
-        evaluate(model, train_loader, criterion, device, 'Train')
-        evaluate(model, val_loader, criterion, device)
+        evaluate(model, train_eval_loader, criterion, device, 'Train')
+        evaluate(model, val_seen_loader, criterion, device, 'Validation Seen')
+        evaluate(model, val_unseen_loader, criterion, device, 'Validation Unseen')
 
 
 def evaluate(model, data_loader, criterion, device, kind='Evaluation'):
@@ -61,11 +62,12 @@ def evaluate(model, data_loader, criterion, device, kind='Evaluation'):
         metrics["accuracy"] = accuracy_score(labels, preds)
         metrics["precision"] = precision_score(labels, preds)
         metrics["recall"] = recall_score(labels, preds)
+        metrics['roc_auc'] = roc_auc_score(labels, preds)
 
         print(
             f'{kind} loss: {metrics["loss"]:.3f}, macro f1: {metrics["macro_f1"]:.3f}, ' + \
             f'micro f1: {metrics["micro_f1"]:.3f}, accuracy: {metrics["accuracy"]:.3f}, ' + \
-            f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}'
+            f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, roc_auc: {metrics["roc_auc"]:.3f}'
         )
 
 def train_freeze(model, train_loader, val_loader, optimizer, criterion, epochs, device, model_dir_path):

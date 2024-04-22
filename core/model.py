@@ -1,7 +1,6 @@
 import torch
-import clip
 from torch.nn import Module, Sequential, Linear
-from transformers import BertModel, BertTokenizer
+from transformers import BertModel, BertTokenizer, AutoModel
 import torchvision.models as models
 
 class HateMemeModel(Module):
@@ -9,25 +8,28 @@ class HateMemeModel(Module):
     def __init__(self, text_model, image_model, dropout=0.1):
         super(HateMemeModel, self).__init__()
         self.text_model = text_model
-        self.batch_norm1 = torch.nn.BatchNorm1d(768)
+        # self.batch_norm1 = torch.nn.BatchNorm1d(256)
         self.image_model = image_model
-        self.batch_norm2 = torch.nn.BatchNorm1d(512)
+        # self.batch_norm2 = torch.nn.BatchNorm1d(512)
         
         # 2816
-        self.fc1 = Linear(768 + 512, 512)
-        self.fc2 = Linear(512, 256)
-        self.fc3 = Linear(256, 2)
+        self.fc1 = Linear(512 + 512, 512)
+        self.fc2 = Linear(512, 128)
+        self.fc3 = Linear(128, 2)
 
         self.relu = torch.nn.ReLU()
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, text, image):
-        text_features = self.relu(self.batch_norm1(self.text_model(**text).pooler_output))
+        text_features = self.relu(self.text_model(**text).pooler_output)
+        # text_features = self.relu(self.batch_norm1(self.text_model(**text).pooler_output))
         image_features = self.image_model(image)
-        image_features = self.relu(self.batch_norm2(image_features.view(image_features.size(0), -1)))
+        image_features = self.relu(image_features.view(image_features.size(0), -1))
+        # image_features = self.relu(self.batch_norm2(image_features.view(image_features.size(0), -1)))
         
         combined = torch.cat([text_features, image_features], dim=1)
-        out = self.dropout(self.relu(self.fc1(combined)))
+        out = self.relu(self.fc1(combined))
+        # out = self.dropout(self.relu(self.fc1(combined)))
         out = self.relu(self.fc2(out))
         out = self.fc3(out)
         
@@ -38,7 +40,7 @@ class PretrainedModel:
 
     @staticmethod
     def load_bert_text_model():
-        return BertModel.from_pretrained('bert-base-uncased')
+        return AutoModel.from_pretrained("google/bert_uncased_L-4_H-256_A-4")
     
     @staticmethod
     def load_bert_tokenizer():
@@ -46,7 +48,7 @@ class PretrainedModel:
     
     @staticmethod
     def load_resnet_image_model():
-        model = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
+        model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         modules = list(model.children())[:-1]
         return Sequential(*modules)
 
@@ -105,5 +107,3 @@ class ClipHateMemeModelFreeze(Module):
             self.dropout(out)
             out = self.fc3(out)
             return out
-
-
