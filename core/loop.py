@@ -85,7 +85,7 @@ def train_freeze(model, train_loader, val_loader, optimizer, criterion, epochs, 
             # label = label.reshape(-1, 1).to(dtype=torch.float32) # if using BCEWithLogitsLoss with 1 output
 
             loss = criterion(output['text_image'], label) + criterion(output['image'], label) + criterion(output['text'], label)
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1e-1)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1e-1)
 
             train_losses.append(loss.item())
             loss.backward()

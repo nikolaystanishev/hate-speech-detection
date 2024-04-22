@@ -5,6 +5,9 @@ import torchvision.models as models
 import os
 import sys
 import json
+import clip
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
 class HateMemeModel(Module):
 
     def __init__(self, text_model, image_model, dropout=0.1):
@@ -62,63 +65,16 @@ class PretrainedModel:
     @staticmethod
     def load_clip_tokenizer():
         return clip.tokenize
-
-
-# class ClipHateMemeModelFreeze(Module):
-#         def __init__(self):
-#             super(ClipHateMemeModelFreeze, self).__init__()
-#             self.device = "cuda" if torch.cuda.is_available() else "cpu"
-#             self.class_filename = os.path.join(os.path.dirname(__file__), '../data/classes_clip_s.jsonl')
-#             self.classes = torch.tensor([json.loads(jline)['embedding'] for jline in open(self.class_filename, 'r').readlines()]).repeat(1,64,1).to(device=self.device)
-#             self.similarity = torch.nn.CosineSimilarity(dim=2)
-#             self.projection = Linear(768, 768)
-#             self.projection2 = Linear(768, 768)
-#             self.c_n = self.classes.shape[0]
-#             self.fc1 = Linear(3*self.c_n, 128)
-#             self.fc2 = Linear(128, 32)
-#             # self.fc3 = Linear(64, 32)
-#             # self.fc4 = Linear(32, 16)
-#             self.fc12 = Linear(768, 768)
-#             self.fc22 = Linear(768, 128)
-#             self.fc32 = Linear(128, 128)
-#             self.fc5 = Linear(128+32, 32)
-#             self.fc6 = Linear(32, 2)
-#             self.dropout = torch.nn.Dropout(0.15)
-#             self.relu = torch.nn.ReLU()
     
-#         def forward(self, text, image):
-#             text_image = torch.mul(text, image)
+    @staticmethod
+    def load_para_t5_model():
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        return AutoModelForSeq2SeqLM.from_pretrained("Vamsi/T5_Paraphrase_Paws").to(device)
+    
+    @staticmethod
+    def load_t5_tokenizer():
+        return AutoTokenizer.from_pretrained("Vamsi/T5_Paraphrase_Paws")  
 
-#             out2 = self.relu(self.fc12(text_image))
-#             out2 = self.dropout(out2)
-#             out2 = self.relu(self.fc22(out2))
-#             out2 = self.dropout(out2)
-#             out2 = self.relu(self.fc32(out2))
-
-#             text_image = self.projection2(text_image)
-#             text_image = self.projection(text_image)
-#             classes = self.relu(self.projection(self.classes))
-#             text = self.relu(self.projection(text))
-#             image = self.relu(self.projection(image))
-
-#             batch_size = text.size(0)
-#             similarity_text = self.similarity(classes[:,:batch_size,:], text.repeat(self.c_n,1,1)).permute(1,0)
-#             similarity_image = self.similarity(classes[:,:batch_size,:], image.repeat(self.c_n,1,1)).permute(1,0)
-#             similarity_combined = self.similarity(classes[:,:batch_size,:], text_image.repeat(self.c_n,1,1)).permute(1,0)
-#             combined = torch.cat([similarity_text, similarity_image, similarity_combined], dim=1)
-
-#             out = self.relu(self.fc1(combined))
-#             out = self.dropout(out)
-#             out = self.relu(self.fc2(out))
-#             out = self.dropout(out)
-#             # out = self.relu(self.fc3(out))
-#             # out = self.dropout(out)
-#             # out = self.relu(self.fc4(out))
-#             # out = self.dropout(out)
-#             out = self.fc5(torch.cat([out, out2], dim=1))
-#             out = self.dropout(out)
-#             out = self.fc6(out)
-#             return out
 
 
 class ClipHateMemeModelFreeze(Module):
