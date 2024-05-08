@@ -70,10 +70,11 @@ def evaluate(model, data_loader, criterion, device, kind='Evaluation'):
             f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, roc_auc: {metrics["roc_auc"]:.3f}'
         )
 
-def train_freeze(model, train_loader, val_loader, optimizer, criterion, epochs, device, model_dir_path):
+def train_freeze(model, train_loader, val_loader, test_loader, optimizer, criterion, epochs, device, model_dir_path):
     train_losses = []
-    model.train()
     for epoch in range(epochs):
+        model.train()
+
         train_losses = []
 
         for i, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
@@ -83,9 +84,8 @@ def train_freeze(model, train_loader, val_loader, optimizer, criterion, epochs, 
             output = model(text, image)
             # label_tensor = torch.nn.functional.one_hot(label).to(dtype=torch.float32) # if using BCEWithLogitsLoss with 2 output
             # label = label.reshape(-1, 1).to(dtype=torch.float32) # if using BCEWithLogitsLoss with 1 output
-
-            loss = criterion(output['text_image'], label) + criterion(output['image'], label) + criterion(output['text'], label)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1e-1)
+            loss = criterion(output, label)# + criterion(output['image'], label) + criterion(output['text'], label)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
 
             train_losses.append(loss.item())
             loss.backward()
@@ -93,12 +93,17 @@ def train_freeze(model, train_loader, val_loader, optimizer, criterion, epochs, 
 
         torch.save(model.state_dict(), f'{model_dir_path}/model_freeze_{epoch + 1}.pth')
         print(f'Epoch {epoch + 1} average loss: {np.mean(train_losses):.3f}')
-        evaluate_freeze(model, train_loader, criterion, device, 'Train')
+        #evaluate_freeze(model, train_loader, criterion, device, 'Train')
         evaluate_freeze(model, val_loader, criterion, device)
+        #evaluate_freeze(model, test_loader, criterion, device)
+
 
 def evaluate_freeze(model, data_loader, criterion, device, kind='Evaluation'):
+    model.eval()
     with torch.no_grad():
         losses, preds, labels = [], [], []
+        preds_mean = []
+        preds1, preds2, preds3 = [], [], []
         for batch in tqdm(data_loader):
             image, text, label = batch
 
@@ -106,21 +111,93 @@ def evaluate_freeze(model, data_loader, criterion, device, kind='Evaluation'):
             # label_tensor = torch.nn.functional.one_hot(label).to(dtype=torch.float32) # if using BCEWithLogitsLoss with 2 output
             # label = label.reshape(-1, 1).to(dtype=torch.float32) # if using BCEWithLogitsLoss with 1 output
 
-            loss = criterion(out['text_image'], label) + criterion(out['image'], label) + criterion(out['text'], label)
+            loss = criterion(out, label)# + criterion(out['image'], label) + criterion(out['text'], label)
             losses.append(loss.item())
 
             # voting mechanism
-            pred1 = np.argmax((torch.sigmoid(out['text_image'])).cpu().detach().numpy(), axis=1)
-            pred2 = np.argmax((torch.sigmoid(out['image'])).cpu().detach().numpy(), axis=1)
-            pred3 = np.argmax((torch.sigmoid(out['text'])).cpu().detach().numpy(), axis=1)
-            pred = np.mean([pred1, pred2, pred3], axis=0)
-            pred = np.round(pred)
+            # pred1 = np.argmax((torch.sigmoid(out['text_image'])).cpu().detach().numpy(), axis=1)
+            # pred2 = np.argmax((torch.sigmoid(out['image'])).cpu().detach().numpy(), axis=1)
+            # pred3 = np.argmax((torch.sigmoid(out['text'])).cpu().detach().numpy(), axis=1)
+            # pred = np.mean([pred1, pred2, pred3], axis=0)
+            # pred = np.round(pred)
 
-            preds.append(pred.tolist())
+            # pred_mean = np.argmax(torch.sigmoid(out['text_image'] + out['image'] + out['text']).cpu().detach().numpy(), axis=-1)
+            # preds_mean.append(pred_mean.tolist())
+
+            # preds1.append(pred1.tolist())
+            # preds2.append(pred2.tolist())
+            # preds3.append(pred3.tolist())
+            pred = np.argmax(out.cpu().detach().numpy(), axis=1)
+            #pred = [1 if out[i] > 0.5 else 0 for i in range(len(out))]
+            preds.append(pred)#.tolist())
             labels.append(label.cpu().numpy())
         
         labels = np.concatenate(labels)
         preds = np.concatenate(preds)
+        # preds_mean = np.concatenate(preds_mean)
+
+        # metrics = {"loss": np.mean(losses)}
+        # metrics["macro_f1"] = f1_score(labels, preds, average="macro")
+        # metrics["micro_f1"] = f1_score(labels, preds, average="micro")
+        # metrics["accuracy"] = accuracy_score(labels, preds)
+        # metrics["precision"] = precision_score(labels, preds)
+        # metrics["recall"] = recall_score(labels, preds)
+        # metrics["ROC-AUC"] = roc_auc_score(labels, preds)
+
+        # print(
+        #     f'{kind} loss: {metrics["loss"]:.3f}, macro f1: {metrics["macro_f1"]:.3f}, ' + \
+        #     f'micro f1: {metrics["micro_f1"]:.3f}, accuracy: {metrics["accuracy"]:.3f}, ' + \
+        #     f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, ' + \
+        #     f'ROC-AUC: {metrics["ROC-AUC"]:.3f}'
+        # )
+        # preds = preds_mean
+        # metrics = {"loss": np.mean(losses)}
+        # metrics["macro_f1"] = f1_score(labels, preds, average="macro")
+        # metrics["micro_f1"] = f1_score(labels, preds, average="micro")
+        # metrics["accuracy"] = accuracy_score(labels, preds)
+        # metrics["precision"] = precision_score(labels, preds)
+        # metrics["recall"] = recall_score(labels, preds)
+        # metrics["ROC-AUC"] = roc_auc_score(labels, preds)
+
+        # print(
+        #     f'{kind} loss: {metrics["loss"]:.3f}, macro f1: {metrics["macro_f1"]:.3f}, ' + \
+        #     f'micro f1: {metrics["micro_f1"]:.3f}, accuracy: {metrics["accuracy"]:.3f}, ' + \
+        #     f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, ' + \
+        #     f'ROC-AUC: {metrics["ROC-AUC"]:.3f}'
+        # )
+        # preds = np.concatenate(preds1)
+        # metrics = {"loss": np.mean(losses)}
+        # metrics["macro_f1"] = f1_score(labels, preds, average="macro")
+        # metrics["micro_f1"] = f1_score(labels, preds, average="micro")
+        # metrics["accuracy"] = accuracy_score(labels, preds)
+        # metrics["precision"] = precision_score(labels, preds)
+        # metrics["recall"] = recall_score(labels, preds)
+        # metrics["ROC-AUC"] = roc_auc_score(labels, preds)
+
+        # print(
+        #     f'{kind} loss: {metrics["loss"]:.3f}, macro f1: {metrics["macro_f1"]:.3f}, ' + \
+        #     f'micro f1: {metrics["micro_f1"]:.3f}, accuracy: {metrics["accuracy"]:.3f}, ' + \
+        #     f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, ' + \
+        #     f'ROC-AUC: {metrics["ROC-AUC"]:.3f}'
+        # )
+        # preds = np.concatenate(preds2)
+        # metrics = {"loss": np.mean(losses)}
+        # metrics["macro_f1"] = f1_score(labels, preds, average="macro")
+        # metrics["micro_f1"] = f1_score(labels, preds, average="micro")
+        # metrics["accuracy"] = accuracy_score(labels, preds)
+        # metrics["precision"] = precision_score(labels, preds)
+        # metrics["recall"] = recall_score(labels, preds)
+        # metrics["ROC-AUC"] = roc_auc_score(labels, preds)
+
+        # print(
+        #     f'{kind} loss: {metrics["loss"]:.3f}, macro f1: {metrics["macro_f1"]:.3f}, ' + \
+        #     f'micro f1: {metrics["micro_f1"]:.3f}, accuracy: {metrics["accuracy"]:.3f}, ' + \
+        #     f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, ' + \
+        #     f'ROC-AUC: {metrics["ROC-AUC"]:.3f}'
+        # )
+        # preds = np.concatenate(preds3)
+
+        print(np.sum(labels), '/', len(labels))
 
         metrics = {"loss": np.mean(losses)}
         metrics["macro_f1"] = f1_score(labels, preds, average="macro")

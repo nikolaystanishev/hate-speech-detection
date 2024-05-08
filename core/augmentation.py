@@ -9,7 +9,7 @@ import sys
 sys.path.append('..')
 import torchvision.transforms as T
 import os
-from model import PretrainedModel
+from core.model import PretrainedModel
 
 #grayscale
 grayscale_transform = T.Grayscale(3)
@@ -20,12 +20,12 @@ random_rotation_transformation_45 = T.RandomRotation(45)
 # random_rotation_transformation_85 = T.RandomRotation(85)
 random_rotation_transformation_65 = T.RandomRotation(65)
 random_flip_transform = T.RandomVerticalFlip()
-rotations = [random_rotation_transformation_45,random_rotation_transformation_65, random_flip_transform]
+rotations = [random_rotation_transformation_45]
 
 #Gausian Blur
 gausian_blur_transformation_13 = T.GaussianBlur(kernel_size = (7,13), sigma = (6 , 9))
 gausian_blur_transformation_56 = T.GaussianBlur(kernel_size = (7,13), sigma = (5 , 8))
-blurs = [gausian_blur_transformation_13,gausian_blur_transformation_56]
+blurs = [gausian_blur_transformation_13]
 
 #Gausian Noise
 def addnoise(input_image, noise_factor = 0.3):
@@ -57,14 +57,12 @@ master_dataset = "/home/ceru/Documents/2o_semestre_23-24/deep_learning/hate-spea
 def augment_image(orig_img, save_path=None):
 	transformations = [rotations, blurs, colour_jitters]#, invert]
 	noise_lvl = np.random.random()
-    
-	if np.random.random() < 0.5:
-		image = addnoise(orig_img, noise_lvl)
+	image = orig_img
+	image = addnoise(orig_img, noise_lvl)
     
 	for el in transformations:
-		if np.random.random() < 0.5:
-			t = np.random.choice(el)
-			image = t(orig_img)
+		t = np.random.choice(el)
+		image = t(orig_img)
 
 
 	if save_path:
@@ -77,7 +75,7 @@ def augment_image(orig_img, save_path=None):
 
 # text augmentation 
 
-def paraphrase_text(text, model=None, tokenizer=None, device='cuda'):
+def paraphrase_text(text, model=None, tokenizer=None, device='cuda', return_number=1):
 	if model is None:
 		model = PretrainedModel.load_para_t5_model()
 	if tokenizer is None:
@@ -93,11 +91,11 @@ def paraphrase_text(text, model=None, tokenizer=None, device='cuda'):
 		top_k=120,
 		top_p=0.98,
 		early_stopping=True,
-		num_return_sequences=1
+		num_return_sequences=return_number
 	)
 	paraphrases = []
 	for output in outputs:
 		line = tokenizer.decode(output, skip_special_tokens=True,clean_up_tokenization_spaces=True)
 		paraphrases.append(line)
-	return paraphrases[0]
+	return paraphrases
 

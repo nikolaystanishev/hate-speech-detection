@@ -80,49 +80,63 @@ class PretrainedModel:
 class ClipHateMemeModelFreeze(Module):
         def __init__(self):
             super(ClipHateMemeModelFreeze, self).__init__()
-
-            self.projection_image = Linear(768, 1028)
-            self.projection_text = Linear(768, 1028)
-
-            self.dropout0 = torch.nn.Dropout(0.2)
-            self.dropout1 = torch.nn.Dropout(0.4)
-            self.dropout2 = torch.nn.Dropout(0.2)
+            self.dropout0 = torch.nn.Dropout(0.25)
 
             self.relu = torch.nn.ReLU()
 
+            self.projection_image = Sequential( 
+                Linear(768, 1024),
+                # self.relu,
+                # self.dropout0,
+                # Linear(1024, 1024),
+                # self.relu
+            )
+            self.projection_text = Sequential( 
+                Linear(768, 1024),
+                # self.relu,
+                # self.dropout0,
+                # Linear(1024, 1024),
+                # self.relu
+            )
+            
+            # self.projection_hate1 = Linear(768, 512)
+            # self.projection_hate2 = Linear(768, 512)
             self.text_image_net = Sequential(
                 self.dropout0,
-                Linear(1028, 1028),
+                Linear(1024, 1024),
                 self.relu,
-                self.dropout2,
-                Linear(1028, 2),
-            )
-            self.image_net = Sequential(
-                self.dropout1,
-                Linear(1028, 1028),
+                self.dropout0,
+                Linear(1024, 1024),
                 self.relu,
-                self.dropout2,
-                Linear(1028, 2),
-            )
-            self.text_net = Sequential(
-                self.dropout1,
-                Linear(1028, 1028),
+                self.dropout0,
+                Linear(1024, 1024),
                 self.relu,
-                self.dropout2,
-                Linear(1028, 2),
+                self.dropout0,
+                Linear(1024, 2),
             )
 
+
+
         def forward(self, text, image):
+
             text_projection = self.projection_text(text)
             image_projection = self.projection_image(image)
-            text_projection = torch.nn.functional.normalize(text_projection, p=2, dim=1)
+
             image_projection = torch.nn.functional.normalize(image_projection, p=2, dim=1)
+            text_projection = torch.nn.functional.normalize(text_projection, p=2, dim=1)
+
+
 
             text_image = torch.mul(image_projection, text_projection)
 
-            out = self.text_image_net(text_image)
-            out_image = self.image_net(image_projection)
-            out_text = self.text_net(text_projection)
+            # hate1 = self.projection_hate1(self.hate_tensor)
+            # hate2 = self.projection_hate2(self.hate_tensor)
 
-            out = {'text_image': out, 'image': out_image, 'text': out_text}
+            # hate_align1 = torch.mul(text_projection, hate1)
+            # hate_align2 = torch.mul(image_projection, hate2)
+
+            # ful = torch.cat([text_image, hate_align1, hate_align2], dim=1)
+
+            out = self.text_image_net(text_image)
+
             return out
