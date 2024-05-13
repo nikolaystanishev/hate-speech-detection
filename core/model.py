@@ -80,35 +80,25 @@ class PretrainedModel:
 class ClipHateMemeModelFreeze(Module):
         def __init__(self):
             super(ClipHateMemeModelFreeze, self).__init__()
-            self.dropout0 = torch.nn.Dropout(0.25)
+            self.dropout0 = torch.nn.Dropout(0.15)
 
             self.relu = torch.nn.ReLU()
 
             self.projection_image = Sequential( 
-                Linear(768, 1024),
-                # self.relu,
-                # self.dropout0,
-                # Linear(1024, 1024),
-                # self.relu
+                Linear(1024, 1024),
             )
             self.projection_text = Sequential( 
                 Linear(768, 1024),
+            )
+            
+            self.text_image_net = Sequential(
+                self.dropout0,
+                # Linear(1024, 1024),
                 # self.relu,
                 # self.dropout0,
                 # Linear(1024, 1024),
-                # self.relu
-            )
-            
-            # self.projection_hate1 = Linear(768, 512)
-            # self.projection_hate2 = Linear(768, 512)
-            self.text_image_net = Sequential(
-                self.dropout0,
-                Linear(1024, 1024),
-                self.relu,
-                self.dropout0,
-                Linear(1024, 1024),
-                self.relu,
-                self.dropout0,
+                # self.relu,
+                # self.dropout0,
                 Linear(1024, 1024),
                 self.relu,
                 self.dropout0,
@@ -126,16 +116,8 @@ class ClipHateMemeModelFreeze(Module):
             text_projection = torch.nn.functional.normalize(text_projection, p=2, dim=1)
 
 
-
             text_image = torch.mul(image_projection, text_projection)
 
-            # hate1 = self.projection_hate1(self.hate_tensor)
-            # hate2 = self.projection_hate2(self.hate_tensor)
-
-            # hate_align1 = torch.mul(text_projection, hate1)
-            # hate_align2 = torch.mul(image_projection, hate2)
-
-            # ful = torch.cat([text_image, hate_align1, hate_align2], dim=1)
 
             out = self.text_image_net(text_image)
 
