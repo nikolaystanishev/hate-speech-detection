@@ -10,6 +10,7 @@ sys.path.append('..')
 import torchvision.transforms as T
 import os
 from core.model import PretrainedModel
+import json
 
 #grayscale
 grayscale_transform = T.Grayscale(3)
@@ -99,3 +100,47 @@ def paraphrase_text(text, model=None, tokenizer=None, device='cuda', return_numb
 		paraphrases.append(line)
 	return paraphrases
 
+
+def add_unseen(data_path):
+	dev_seen = []
+	with open(os.path.join(data_path, 'dev_seen.jsonl'), 'r') as f:
+		for line in f:
+			dev_seen.append(json.loads(line))
+	
+	dev_unseen = []
+
+	with open(os.path.join(data_path, 'dev_unseen.jsonl'), 'r') as f:
+		for line in f:
+			dev_unseen.append(json.loads(line))
+	
+	new = []
+	for line in dev_unseen:
+		if line not in dev_seen:
+			new.append(line)
+	
+	test_seen = []
+	with open(os.path.join(data_path, 'test_seen.jsonl'), 'r') as f:
+
+		for line in f:
+			test_seen.append(json.loads(line))
+	
+	test_unseen = []
+	with open(os.path.join(data_path, 'test_unseen.jsonl'), 'r') as f:
+		for line in f:
+			test_unseen.append(json.loads(line))
+	
+	for line in test_unseen:
+
+		if line not in test_seen:
+			new.append(line)
+	
+	train = []
+
+	with open(os.path.join(data_path, 'train.jsonl'), 'r') as f:
+		for line in f:
+			train.append(json.loads(line))
+	
+	train.extend(new)
+	with open(os.path.join(data_path, 'train_aug.jsonl'), 'w') as f:
+		for line in train:
+			f.write(json.dumps(line) + '\n')

@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, roc_auc_score
 from tqdm import tqdm
+import os
 
 
 def train(model, train_loader, train_eval_loader, val_seen_loader, val_unseen_loader, optimizer, criterion, epochs, device, model_dir_path):
@@ -70,50 +71,48 @@ def evaluate(model, data_loader, criterion, device, kind='Evaluation'):
             f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, roc_auc: {metrics["roc_auc"]:.3f}'
         )
 
-def train_freeze(model, train_loader, val_loader, optimizer, criterion, epochs, device, model_dir_path):
-    train_losses = []
+def train_clip(model, train_loader, val_loader, optimizer, criterion, epochs, device, model_dir_path):
+    if not os.path.exists(model_dir_path):
+        os.makedirs(model_dir_path)
+    statistics_train = []
+    statistics_eval = []
     for epoch in range(epochs):
         model.train()
-
+        count = 0
         train_losses = []
-
         for batch in tqdm(train_loader, total=len(train_loader)):
             optimizer.zero_grad()
 
             image, text, label = batch
+            count += label.sum().item()
             output = model(text, image)
             output = torch.unbind(output, dim=1)[0]
-
-
             loss = criterion(output, label)
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
 
             train_losses.append(loss.item())
             loss.backward()
             optimizer.step()
-
+        print(count, len(train_loader.dataset) - count)
         torch.save(model.state_dict(), f'{model_dir_path}/model_freeze_{epoch + 1}.pth')
         print(f'Epoch {epoch + 1} average loss: {np.mean(train_losses):.3f}')
 
-        evaluate_freeze(model, train_loader, criterion, device, 'Train')
-        evaluate_freeze(model, val_loader, criterion, device)
+        statistics_train.append(evaluate_clip(model, train_loader, criterion, device, 'Train'))
+        statistics_eval.append(evaluate_clip(model, val_loader, criterion, device))
 
         train_loader.dataset.save_embeddings()
+    return statistics_train, statistics_eval
 
-
-def evaluate_freeze(model, data_loader, criterion, device, kind='Evaluation'):
+def evaluate_clip(model, data_loader, criterion, device, kind='Evaluation'):
     model.eval()
     with torch.no_grad():
         losses, preds, labels = [], [], []
-        preds_mean = []
-        preds1, preds2, preds3 = [], [], []
         for batch in tqdm(data_loader):
             image, text, label = batch
 
             out = model(text, image)
-            out = torch.unbind(out, dim=1)[0]
-
-
+            if len(out.shape) == 3:
+                out = torch.unbind(out, dim=1)[0]
             loss = criterion(out, label)
             losses.append(loss.item())
 
@@ -121,7 +120,6 @@ def evaluate_freeze(model, data_loader, criterion, device, kind='Evaluation'):
 
             preds.append(pred)
             labels.append(label.cpu().numpy())
-        
         labels = np.concatenate(labels)
         preds = np.concatenate(preds)
 
@@ -141,3 +139,4 @@ def evaluate_freeze(model, data_loader, criterion, device, kind='Evaluation'):
             f'ROC-AUC: {metrics["ROC-AUC"]:.3f}'
         )
         data_loader.dataset.save_embeddings()
+        return metrics

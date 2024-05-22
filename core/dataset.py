@@ -8,6 +8,7 @@ from transformers import CLIPProcessor, CLIPTokenizer, CLIPModel
 import torchvision.transforms as transforms
 from tqdm.notebook import tqdm
 import numpy as np
+from core.augmentation import augment_image, paraphrase_text
 
 class HatefulMemesDataset(Dataset):
 
@@ -62,28 +63,8 @@ def collate_fn(batch):
         label_tensor
     )
 
-def collate_fn_clip(batch):
-    lens = [len(row[1][0]) for row in batch]
-    bsz, max_seq_len = len(batch), max(lens)
-    input_ids_tensor = torch.zeros(bsz, max_seq_len).long()
-    image_tensor = torch.stack([row[0] for row in batch])
-    mask = torch.zeros(bsz, max_seq_len).long()
 
-    label_tensor = torch.tensor([row[2] for row in batch])
-
-    for i_batch, (input_row, length) in enumerate(zip(batch, lens)):
-        input_ids_tensor[i_batch, :length] = input_row[1]['text']
-        mask[i_batch, :length] = input_row[1]['attention_mask']
-    return (
-        image_tensor,
-        {
-            'input_ids': input_ids_tensor,
-            'attention_mask': mask
-        },
-        label_tensor
-    )
-
-class ClipHatefulMemeDatasetFreeze(Dataset):
+class ClipHatefulMemeDatasetOpenAI(Dataset):
     def __init__(self, data_file_path, random=True):
         self.data = [json.loads(jline) for jline in open(data_file_path, 'r').readlines()]
         self.data_dir = os.path.dirname(data_file_path)
@@ -148,7 +129,6 @@ class ClipHatefulMemeDatasetFreeze(Dataset):
         if type(img) != torch.Tensor or type(text) != torch.Tensor or type(label) != torch.Tensor:
             print(type(img), type(text))
             print(img, text)
-            print('F')
         return img.to(device=self.device), text.to(device=self.device), label.to(device=self.device)
     
     def save_embeddings(self):
@@ -156,3 +136,73 @@ class ClipHatefulMemeDatasetFreeze(Dataset):
             with open(os.path.join(self.embedding_dir, os.path.basename(self.data_file_path).split('.')[0] + 'embeddings.jsonl'), 'w') as f:
                     json.dump(self.embedding_data, f)
             self.modified = False
+
+class ClipHatefulMemeDatasetPrecomputed(Dataset):
+    def __init__(self, data_file_path, augment_img=True, paraphrase=True):
+        self.data = [json.loads(jline) for jline in open(data_file_path, 'r').readlines()]
+        print('loaded embeddings')
+        self.data_dir = os.path.dirname(data_file_path)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.augment_img = augment_img
+        self.paraphrase = paraphrase
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+
+        el = self.data[idx]
+        if self.augment_img and np.random.random()<0.5:
+            i = np.random.randint(1, len(el['img_embedding']))
+        else:
+            i = 0
+        if self.paraphrase and np.random.random()<0.5:
+            j = np.random.randint(1, len(el['text_embedding']))
+        else:
+            j = 0
+        img = torch.tensor(el['img_embedding'][i]).to(self.device)
+        text = torch.tensor(el['text_embedding'][j]).to(self.device)
+        label = torch.tensor(el['label']).to(self.device)
+        return img, text, label
+    
+    def save_embeddings(self):
+        return
+
+class ClipHatefulMemeDataset(Dataset):
+    def __init__(self, data_file_path, model_name="ViT-L/14", augment_img=True, paraphrase=True):
+        self.data = [json.loads(jline) for jline in open(data_file_path, 'r').readlines()]
+        self.data_dir = os.path.dirname(data_file_path)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model, self.image_transform = PretrainedModel.load_clip_model(model_name)
+        self.tokenizer = PretrainedModel.load_clip_tokenizer()
+        self.paraphrase = paraphrase
+        self.augment_img = augment_img
+        if self.paraphrase:
+            self.paraphrase = paraphrase_text
+        else:
+            self.paraphrase = lambda x: [x]
+        if self.augment_img:
+            self.augment_image = augment_image
+        else:
+            self.augment_image = lambda x: x
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        el = self.data[idx]
+        img = Image.open(os.path.join(self.data_dir, el['img']))
+        text = el['text']
+        if self.augment_img and np.random.random()<0.5:
+            img = self.augment_image(img)
+        img = self.image_transform(img).unsqueeze(0).to(self.device)
+        img = self.model.encode_image(img).to(self.device)
+        if self.paraphrase and np.random.random()<0.5:
+            text = self.paraphrase(text)[0]
+        text = self.tokenizer(text).to(self.device)
+        text = self.model.encode_text(text).to(self.device)
+        label = torch.tensor(el['label']).to(self.device)
+        return img, text, label
+    
+    def save_embeddings(self):
+        return

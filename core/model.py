@@ -58,9 +58,9 @@ class PretrainedModel:
         return Sequential(*modules)
 
     @staticmethod
-    def load_clip_model():
+    def load_clip_model(name="ViT-L/14"):
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        return clip.load("ViT-L/14", device=device)
+        return clip.load(name, device=device)
 
     @staticmethod
     def load_clip_tokenizer():
@@ -78,27 +78,21 @@ class PretrainedModel:
 
 
 class ClipHateMemeModelFreeze(Module):
-        def __init__(self):
+        def __init__(self, size):
             super(ClipHateMemeModelFreeze, self).__init__()
-            self.dropout0 = torch.nn.Dropout(0.15)
+            self.dropout0 = torch.nn.Dropout(0.2)
 
             self.relu = torch.nn.ReLU()
 
             self.projection_image = Sequential( 
-                Linear(1024, 1024),
+                Linear(size[1], 1024),
             )
             self.projection_text = Sequential( 
-                Linear(768, 1024),
+                Linear(size[0], 1024),
             )
             
             self.text_image_net = Sequential(
                 self.dropout0,
-                # Linear(1024, 1024),
-                # self.relu,
-                # self.dropout0,
-                # Linear(1024, 1024),
-                # self.relu,
-                # self.dropout0,
                 Linear(1024, 1024),
                 self.relu,
                 self.dropout0,
@@ -107,13 +101,14 @@ class ClipHateMemeModelFreeze(Module):
 
 
 
+
         def forward(self, text, image):
 
             text_projection = self.projection_text(text)
             image_projection = self.projection_image(image)
+            image_projection = torch.nn.functional.normalize(image_projection, p=2, dim=0)
+            text_projection = torch.nn.functional.normalize(text_projection, p=2, dim=0)                   
 
-            image_projection = torch.nn.functional.normalize(image_projection, p=2, dim=1)
-            text_projection = torch.nn.functional.normalize(text_projection, p=2, dim=1)
 
 
             text_image = torch.mul(image_projection, text_projection)

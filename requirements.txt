@@ -1,0 +1,9 @@
+torch
+transformers
+numpy
+torchvision
+pillow
+tqdm
+scikit-learn
+clip
+torchsummary
