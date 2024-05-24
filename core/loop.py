@@ -5,9 +5,10 @@ from tqdm import tqdm
 import os
 
 
-def train(model, train_loader, train_eval_loader, val_seen_loader, val_unseen_loader, optimizer, criterion, epochs, device, model_dir_path):
+def train(model, train_loader, optimizer, criterion, epochs, device, model_dir_path, eval_loaders, lr_schedule=None):
     train_losses = []
     model.train()
+    # model.freeze_backbone_model()
     for epoch in range(epochs):
         train_losses = []
 
@@ -30,32 +31,41 @@ def train(model, train_loader, train_eval_loader, val_seen_loader, val_unseen_lo
 
         torch.save(model.state_dict(), f'{model_dir_path}/model_{epoch + 1}.pth')
 
-        print(f'Epoch {epoch + 1} average loss: {np.mean(train_losses):.3f}')
-        evaluate(model, train_eval_loader, criterion, device, 'Train')
-        evaluate(model, val_seen_loader, criterion, device, 'Validation Seen')
-        evaluate(model, val_unseen_loader, criterion, device, 'Validation Unseen')
+        print(f'Train loss: {np.mean(train_losses):.3f}')
+
+        for key, loader in eval_loaders.items():
+            evaluate(model, loader, criterion, device, key)
+
+        if lr_schedule is not None:
+            lr_schedule.step()
 
 
 def evaluate(model, data_loader, criterion, device, kind='Evaluation'):
     with torch.no_grad():
         losses, preds, labels = [], [], []
         for batch in tqdm(data_loader):
-            image, text, label = batch
+            image, text, label, idx = batch
             image = image.to(device)
             text = {k: v.to(device) for k, v in text.items()}
             label = label.to(device)
 
             out = model(text, image)
-            loss = criterion(out, label)
-            losses.append(loss.item())
+            if criterion is not None:
+                loss = criterion(out, label)
+                losses.append(loss.item())
 
             pred = np.argmax(torch.sigmoid(out).cpu().detach().numpy(), axis=1)
 
             preds.append(pred.tolist())
             labels.append(label.cpu().numpy())
+
+            print(idx)
         
         labels = np.concatenate(labels)
         preds = np.concatenate(preds)
+
+        print(labels)
+        print(preds)
 
         metrics = {"loss": np.mean(losses)}
         metrics["macro_f1"] = f1_score(labels, preds, average="macro")
@@ -70,6 +80,7 @@ def evaluate(model, data_loader, criterion, device, kind='Evaluation'):
             f'micro f1: {metrics["micro_f1"]:.3f}, accuracy: {metrics["accuracy"]:.3f}, ' + \
             f'precision: {metrics["precision"]:.3f}, recall: {metrics["recall"]:.3f}, roc_auc: {metrics["roc_auc"]:.3f}'
         )
+
 
 def train_clip(model, train_loader, val_loader, optimizer, criterion, epochs, device, model_dir_path):
     if not os.path.exists(model_dir_path):

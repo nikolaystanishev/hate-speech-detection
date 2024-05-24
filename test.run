@@ -16,4 +16,4 @@
 source ~/venvs/nstanishev-sp/bin/activate
 module load gcc openmpi py-torch py-torchvision
 
-sh train.sh
+sh test.sh

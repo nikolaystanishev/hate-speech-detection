@@ -1,5 +1,6 @@
 import os
 import json
+import random
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
@@ -10,13 +11,15 @@ from tqdm.notebook import tqdm
 import numpy as np
 from core.augmentation import augment_image, paraphrase_text
 
+
 class HatefulMemesDataset(Dataset):
 
-    def __init__(self, data_file_path, tokenizer=None, transform=None):
+    def __init__(self, data_file_path, tokenizer=None, transform=None, augment_transform=None):
         self.data = [json.loads(jline) for jline in open(data_file_path, 'r').readlines()]
         self.data_dir = os.path.dirname(data_file_path)
         self.tokenizer = tokenizer
         self.transform = transform
+        self.augment_transform = augment_transform
 
     def __len__(self):
         return len(self.data)
@@ -28,12 +31,22 @@ class HatefulMemesDataset(Dataset):
         text = el['text']
         label = el['label']
 
-        if self.transform:
-            img = self.transform(img)
+        transform = self.get_random_transform()
+        if transform:
+            img = transform(img)
         if self.tokenizer:
             text = self.tokenizer(text.lower(), return_tensors='pt')
 
-        return img, text, label
+        return img, text, label, idx
+    
+    def get_random_transform(self):
+        transforms = []
+        if self.transform:
+            transforms.append(self.transform)
+        if self.augment_transform:
+            transforms.append(self.augment_transform)
+
+        return random.choice(transforms) if len(transforms) != 0 else None
 
 
 def collate_fn(batch):
@@ -48,6 +61,8 @@ def collate_fn(batch):
 
     label_tensor = torch.tensor([row[2] for row in batch])
 
+    idx_tensor = torch.tensor([row[3] for row in batch])
+
     for i_batch, (input_row, length) in enumerate(zip(batch, lens)):
         input_ids_tensor[i_batch, :length] = input_row[1]['input_ids'][0]
         token_type_ids_tensor[i_batch, :length] = input_row[1]['token_type_ids'][0]
@@ -60,7 +75,8 @@ def collate_fn(batch):
             'token_type_ids': token_type_ids_tensor,
             'attention_mask': attention_mask_tensor
         },
-        label_tensor
+        label_tensor,
+        idx_tensor
     )
 
 

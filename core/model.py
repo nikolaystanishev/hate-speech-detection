@@ -8,35 +8,45 @@ import json
 import clip
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+
 class HateMemeModel(Module):
 
     def __init__(self, text_model, image_model, dropout=0.1):
         super(HateMemeModel, self).__init__()
         self.text_model = text_model
-        # self.batch_norm1 = torch.nn.BatchNorm1d(256)
+        self.batch_norm1 = torch.nn.BatchNorm1d(256)
         self.image_model = image_model
-        # self.batch_norm2 = torch.nn.BatchNorm1d(512)
+        self.batch_norm2 = torch.nn.BatchNorm1d(512)
         
         # 2816
-        self.fc1 = Linear(512 + 512, 512)
-        self.fc2 = Linear(512, 128)
-        self.fc3 = Linear(128, 2)
+        self.fc1 = Linear(256, 256)
+        self.fc2 = Linear(512, 256)
+        self.fc3 = Linear(256, 128)
+        self.fc4 = Linear(128, 64)
+        self.fc5 = Linear(64, 2)
 
-        self.relu = torch.nn.ReLU()
+        self.relu = torch.nn.PReLU()
         self.dropout = torch.nn.Dropout(dropout)
 
+    def freeze_backbone_model(self):
+        for param in self.text_model.named_parameters():
+            # if 'layer.7' not in param[0] and 'pooler' not in param[0]:
+            param[1].requires_grad = False
+        for param in self.image_model.named_parameters():
+            # if 'layer4' not in param[0]:
+            param[1].requires_grad = False
+
     def forward(self, text, image):
-        text_features = self.relu(self.text_model(**text).pooler_output)
-        # text_features = self.relu(self.batch_norm1(self.text_model(**text).pooler_output))
+        text_features = self.relu(self.batch_norm1(self.text_model(**text).pooler_output))
         image_features = self.image_model(image)
-        image_features = self.relu(image_features.view(image_features.size(0), -1))
-        # image_features = self.relu(self.batch_norm2(image_features.view(image_features.size(0), -1)))
-        
-        combined = torch.cat([text_features, image_features], dim=1)
-        out = self.relu(self.fc1(combined))
-        # out = self.dropout(self.relu(self.fc1(combined)))
-        out = self.relu(self.fc2(out))
-        out = self.fc3(out)
+        image_features = self.relu(self.batch_norm2(image_features.view(image_features.size(0), -1)))
+
+        text = self.relu(self.fc1(text_features))
+        image = self.relu(self.fc2(image_features))
+        combined = text * image
+        out = self.dropout(self.relu(self.fc3(combined)))
+        out = self.dropout(self.relu(self.fc4(out)))
+        out = self.fc5(out)
         
         return out
 
@@ -53,7 +63,7 @@ class PretrainedModel:
     
     @staticmethod
     def load_resnet_image_model():
-        model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        model = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
         modules = list(model.children())[:-1]
         return Sequential(*modules)
 
