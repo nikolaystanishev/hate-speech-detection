@@ -12,7 +12,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 from core.augmentation import augment_image, paraphrase_text
 
-def makeClipDataset(new_data_file_path, source_data_path):
+def makeClipDataset(new_data_file_path, source_data_path, model_name):
 	if not os.path.exists(source_data_path):
 		print('file not found:', source_data_path)
 		return
@@ -20,7 +20,7 @@ def makeClipDataset(new_data_file_path, source_data_path):
 		print('file already exists, remove it to proceed:', new_data_file_path)
 		return
 	data_dir = os.path.dirname(source_data_path)
-	model, transform = PretrainedModel.load_clip_model()
+	model, transform = PretrainedModel.load_clip_model(model_name)
 	tokenizer = PretrainedModel.load_clip_tokenizer()
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	model = model.to(device=device)

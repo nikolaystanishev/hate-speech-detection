@@ -161,21 +161,26 @@ def main(model_name, augment_image, paraphrase, precomputed, balancing, train_da
 		train_dataset = ClipHatefulMemeDatasetOpenAI(os.path.join(DATA_DIR, train_data), augment_image=(augment_image=="True"), paraphrase=(paraphrase=="True"))
 		val_dataset = ClipHatefulMemeDatasetOpenAI(os.path.join(DATA_DIR, eval_data), augment_image=False, paraphrase=False)
 		test_dataset = ClipHatefulMemeDatasetOpenAI(os.path.join(DATA_DIR, test_data), augment_image=False, paraphrase=False)
+		count = 0
+		for el in train_dataset:
+			count += el[2].item()
+		print('Positive samples:', count, 'Negative samples:', len(train_dataset)-count)
 	elif precomputed == 'True':
 		print('Using precomputed embeddings')
 		train_dataset = ClipHatefulMemeDatasetPrecomputed(os.path.join(DATA_DIR, train_data), augment_img=(augment_image=="True"), paraphrase=(paraphrase=="True"))
 		val_dataset = ClipHatefulMemeDatasetPrecomputed(os.path.join(DATA_DIR, eval_data), augment_img=False, paraphrase=False)
 		test_dataset = ClipHatefulMemeDatasetPrecomputed(os.path.join(DATA_DIR, test_data), augment_img=False, paraphrase=False)
+		count = 0
+		for el in train_dataset:
+			count += el[2].item()
+		print('Positive samples:', count, 'Negative samples:', len(train_dataset)-count)
 	else:
 		train_dataset = ClipHatefulMemeDataset(os.path.join(DATA_DIR, train_data), model_name, augment_img=(augment_image=="True"), paraphrase=(paraphrase=="True"))
 		val_dataset = ClipHatefulMemeDataset(os.path.join(DATA_DIR, eval_data), augment_img=False, paraphrase=False)
 		test_dataset = ClipHatefulMemeDataset(os.path.join(DATA_DIR, test_data), augment_img=False, paraphrase=False)
-
+		count = 3019
 	################################ DATALOADERS ################################
-	count = 0
-	for el in train_dataset:
-		count += el[2].item()
-	print('Positive samples:', count, 'Negative samples:', len(train_dataset)-count)
+
 
 	if balancing == 'sampler':
 		weights = 1. / np.array([len(train_dataset)-count, count])
@@ -223,7 +228,7 @@ def main(model_name, augment_image, paraphrase, precomputed, balancing, train_da
 	model.eval()
 	test_results = evaluate_clip(model, test_loader, criterion, device)
 	if model_name=='ViT-L/14':
-		CUSTOM_DATA_DIR = os.path.join(cur_dir, 'Real_Life_Data_2024/')
+		CUSTOM_DATA_DIR = os.path.join(cur_dir, 'Dataset/')
 		test_dataset = ClipHatefulMemeDatasetPrecomputed(os.path.join(CUSTOM_DATA_DIR, 'real_life_data_precomputed.jsonl'), augment_img=False, paraphrase=False)
 		test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=True)
 		custom_test_results = evaluate_clip(model, test_loader, criterion, device, kind='Custom Test')
@@ -231,7 +236,7 @@ def main(model_name, augment_image, paraphrase, precomputed, balancing, train_da
 		custom_test_results = None
 
 	################################ PLOTTING ################################
-	plot_results(results[0], results[1], test_results, custom_test_results, f'{model_name.split('/')[0]}_aug_{augment_image}_para_{paraphrase}_precomputed_{precomputed}_balancing_{balancing}_train_{train_data.split(".")[0]}.pdf')
+	plot_results(results[0], results[1], test_results, custom_test_results, f'{model_name.split("/")[0]}_aug_{augment_image}_para_{paraphrase}_precomputed_{precomputed}_balancing_{balancing}_train_{train_data.split(".")[0]}.pdf')
 
 
 if __name__ == '__main__':

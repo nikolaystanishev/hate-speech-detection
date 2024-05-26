@@ -5,5 +5,4 @@ torchvision
 pillow
 tqdm
 scikit-learn
-clip
 torchsummary
