@@ -6,3 +6,10 @@ pillow
 tqdm
 scikit-learn
 torchsummary
+os
+numpy
+argparse
+matplotlib
+random2
+pandas
+jsonlib
