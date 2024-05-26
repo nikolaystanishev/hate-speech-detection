@@ -14,3 +14,7 @@ To run the clip model few steps are required so we have created a notebook to he
 - **On clip precomputed embeddings** The augmentation with precomputed embeddings is performed by computing the initial embedding and then 10 different image augmentation and 10 text paraphrases. Then the dataset if a flag is active will sample the original embeddings or a random augmentation with 50% probability.
 
 - **On inference** The goal of our project was to inquire the state of the art on this task and not to create a ready to use model to detect hateful memes. This justify the absence of an interface that allow to load the model and test it.
+
+## Late Fusion Model:
+
+`train.sh` script is responsible for training the late fusion model. Evaluation could be done with the `test.sh` script. If you are running on izar you can use the corresponding `train.run` and `test.run` configuration files.
