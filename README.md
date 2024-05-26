@@ -1,20 +1,24 @@
 # hate-speech-detection
-Deep Learning course project
+**Deep Learning course project**
 
-## Datasets
+### Datasets
 The base dataset can be downloaded [here](https://hatefulmemeschallenge.com/)
 
 The new dataset can be found [here](https://drive.google.com/drive/folders/196jVnlt4pgWGHH3MqmYWstC_aeAFw7FM?usp=sharing)
 
-## CLIP Model run:
+### CLIP Model run:
 To run the clip model few steps are required so we have created a notebook to help with the task. The notebook is positioned in ./notebooks/ and is called 'setup_clip.ipynb'.
-The best model corresponding to CLIP ViT-L/14 (U + A + B) results in the report can be found at this [link](https://drive.google.com/drive/folders/1tvzRkZxXZvHH2XgbZa3U9GhLg_mr7TUE?usp=sharing) alongside the example of code run to generate it.
+The best model corresponding to CLIP ViT-L/14 (U + A + B) results in the report can be found at this [link](https://drive.google.com/drive/folders/1tvzRkZxXZvHH2XgbZa3U9GhLg_mr7TUE?usp=sharing) alongside the example code run to generate it.
 
-## Late Fusion Model:
+### Late Fusion Model:
 
-`train.sh` script is responsible for training the late fusion model. Evaluation could be done with the `test.sh` script. If you are running on izar you can use the corresponding `train.run` and `test.run` configuration files.
+`train.sh` script is responsible for training the late fusion model. Evaluation could be done with the `test.sh` script. If you are running on izar you can use the corresponding `train.run` and `test.run` configuration files. 
+The best late fusion model obtained can be found at this [link](https://drive.google.com/drive/folders/1Ome917fg2AiHYj6QYlHFG78B9tN9iWrk?usp=sharing) alongside the example code run to generate it.
 
-#### Notes:
+
+-----
+
+### Notes:
 
 - **On clip precomputed embeddings** The augmentation with precomputed embeddings is performed by computing the initial embedding and then 10 different image augmentation and 10 text paraphrases. Then the dataset if a flag is active will sample the original embeddings or a random augmentation with 50% probability.
 
