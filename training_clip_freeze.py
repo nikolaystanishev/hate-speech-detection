@@ -201,6 +201,8 @@ def main(model_name, augment_image, paraphrase, precomputed, balancing, train_da
 	################################ TRAINING ################################
 	if balancing == 'weight':
 		weights = 1. / np.array([count, len(train_dataset)-count])
+	else:
+		weights = [1., 1.]
 	optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-2)
 	criterion = nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=torch.float32))
     
