@@ -1,4 +1,4 @@
-# hate-speach-detection
+# hate-speech-detection
 Deep Learning course project
 
 ## Datasets
