@@ -15,7 +15,7 @@ def train(model, train_loader, optimizer, criterion, epochs, device, model_dir_p
         for i, batch in tqdm(enumerate(train_loader)):
             optimizer.zero_grad()
 
-            image, text, label = batch
+            image, text, label, _ = batch
             image = image.to(device)
             text = {k: v.to(device) for k, v in text.items()}
             label = label.to(device)
