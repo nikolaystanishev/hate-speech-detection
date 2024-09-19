@@ -8,7 +8,7 @@ The new dataset can be found [here](https://drive.google.com/drive/folders/196jV
 
 ### CLIP Model run:
 To run the clip model few steps are required so we have created a notebook to help with the task. The notebook is positioned in ./notebooks/ and is called 'setup_clip.ipynb'.
-The best model corresponding to CLIP ViT-L/14 (U + A + B) results in the report can be found at this [link](https://drive.google.com/drive/folders/1tvzRkZxXZvHH2XgbZa3U9GhLg_mr7TUE?usp=sharing) alongside the example code run to generate it.
+The best model corresponding to CLIP ViT-L/14 (U + A + B) results in the report can be found at this [link](https://huggingface.co/datasets/c-e-r-u/DeepLearning-HateSpeachDetection) alongside the example code run to generate it.
 
 ### Late Fusion Model:
 
